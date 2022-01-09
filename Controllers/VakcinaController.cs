@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Models;
 
@@ -28,8 +30,7 @@ namespace Travel.Controllers
         {
             if(string.IsNullOrWhiteSpace(vakcina.Proizvodjac) || vakcina.Proizvodjac.Length > 50)
                 return BadRequest("Nevalidno ime proizvodjaca vakcine!");
-            if(vakcina.Doza < 1 || vakcina.Doza>4)
-                return BadRequest("Nevalidna vrednost za primljenu dozu vakcine");
+            
             
             try{
                 Context.Vakcine.Add(vakcina);
@@ -46,14 +47,13 @@ namespace Travel.Controllers
 
         [Route("IzbrisiVakcinu/{nazivProizvodjaca}/{doza}")]
         [HttpDelete]
-        public async Task<ActionResult> IzbrisiVakcinu(string nazivProizvodjaca, int doza)
+        public async Task<ActionResult> IzbrisiVakcinu(string nazivProizvodjaca)
         {
             if(string.IsNullOrWhiteSpace(nazivProizvodjaca) || nazivProizvodjaca.Length > 50)
                 return BadRequest("Nevalidno ime proizvodjaca vakcine!");
-            if(doza < 1 || doza > 4)
-                return BadRequest("Nevalidna vrednost za primljenu dozu vakcine");
+            
             try{
-                var vakcina = Context.Vakcine.Where(p => p.Proizvodjac == nazivProizvodjaca && p.Doza == doza).FirstOrDefault();
+                var vakcina = Context.Vakcine.Where(p => p.Proizvodjac == nazivProizvodjaca).FirstOrDefault();
                 if(vakcina == null)
                     return BadRequest("Nije pronadjena prosledjena vakcina!");
                 
@@ -85,13 +85,27 @@ namespace Travel.Controllers
         //         return BadRequest(e.Message);
         //     }
         // }
-
+        //[EnableCors("CORS")]
         [Route("PrikaziVakcine")]
         [HttpGet]
         public async Task<ActionResult> PrikaziVakcine()
         {
             try{
-                return Ok(Context.Vakcine);
+                return Ok( await Context.Vakcine.Select(p => 
+                        new{
+                            Naziv = p.Proizvodjac,
+                            Id = p.ID
+                        }
+                        ).ToListAsync());
+        
+
+        //         return Ok( await Context.Rokovi.Select(p => 
+                     // new{
+        //              Naziv = p.Naziv,
+        //              Id = p.ID
+        //              }
+        //          ).ToListAsync());
+        
             }
             catch(Exception e)
             {

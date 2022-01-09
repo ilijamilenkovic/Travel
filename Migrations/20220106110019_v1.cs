@@ -2,7 +2,7 @@
 
 namespace Travel.Migrations
 {
-    public partial class V1 : Migration
+    public partial class v1 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -12,7 +12,8 @@ namespace Travel.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Naziv = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true)
+                    Naziv = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true),
+                    SVGId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -38,7 +39,8 @@ namespace Travel.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Tip = table.Column<int>(type: "int", nullable: false)
+                    Tip = table.Column<int>(type: "int", nullable: false),
+                    Starost = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,8 +53,7 @@ namespace Travel.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Proizvodjac = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Doza = table.Column<int>(type: "int", nullable: false)
+                    Proizvodjac = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -111,24 +112,27 @@ namespace Travel.Migrations
                 name: "DrzavaVakcina",
                 columns: table => new
                 {
-                    PodrzaneDrzaveID = table.Column<int>(type: "int", nullable: false),
-                    PodrzanoID = table.Column<int>(type: "int", nullable: false)
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    vakcinaID = table.Column<int>(type: "int", nullable: true),
+                    drzavaID = table.Column<int>(type: "int", nullable: true),
+                    doza = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_DrzavaVakcina", x => new { x.PodrzaneDrzaveID, x.PodrzanoID });
+                    table.PrimaryKey("PK_DrzavaVakcina", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_DrzavaVakcina_Drzava_PodrzaneDrzaveID",
-                        column: x => x.PodrzaneDrzaveID,
+                        name: "FK_DrzavaVakcina_Drzava_drzavaID",
+                        column: x => x.drzavaID,
                         principalTable: "Drzava",
                         principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_DrzavaVakcina_Vakcina_PodrzanoID",
-                        column: x => x.PodrzanoID,
+                        name: "FK_DrzavaVakcina_Vakcina_vakcinaID",
+                        column: x => x.vakcinaID,
                         principalTable: "Vakcina",
                         principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -142,9 +146,14 @@ namespace Travel.Migrations
                 column: "PodrzaniTestoviID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DrzavaVakcina_PodrzanoID",
+                name: "IX_DrzavaVakcina_drzavaID",
                 table: "DrzavaVakcina",
-                column: "PodrzanoID");
+                column: "drzavaID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DrzavaVakcina_vakcinaID",
+                table: "DrzavaVakcina",
+                column: "vakcinaID");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

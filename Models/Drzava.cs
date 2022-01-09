@@ -12,7 +12,9 @@ namespace Models
         [MaxLength(40)]
         public string Naziv{get;set;}
 
-        public List<Vakcina> PodrzaneVakcine{get;set;} //lista vakcina koje drzava podrzava 
+        public string SVGId{get;set;}// za povezivanje mape
+
+        public List<DrzavaVakcina> PodrzaneVakcine{get;set;} //lista vakcina koje drzava podrzava 
         public List<Pasos> PodrzaniPasosi{get;set;} //lista pasosa koji su dozvoljeni da udju u konkretnu drzavu
 
         public List<Test> PodrzaniTestovi{get;set;} //lista tipova testova koje drzava podrzava za ulazak u istu

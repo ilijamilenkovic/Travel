@@ -118,14 +118,16 @@ namespace Travel.Controllers
                 if(drzavaZaPromenu == null)
                     return BadRequest("Takva drzava ne postoji");
                 
-                var vakcina = Context.Vakcine.Where(p => p.Proizvodjac == nazivVakcine && p.Doza == doza).FirstOrDefault();
+                var vakcina = Context.Vakcine.Where(p => p.Proizvodjac == nazivVakcine).FirstOrDefault();
                 if(vakcina == null)
                     return BadRequest("Takva vakcina ne postoji!");
+                
+                DrzavaVakcina veza = new DrzavaVakcina();
+                veza.doza = doza;
+                veza.drzava = drzavaZaPromenu;
+                veza.vakcina = vakcina;
 
-                if(drzavaZaPromenu.PodrzaneVakcine == null)
-                    drzavaZaPromenu.PodrzaneVakcine = new List<Vakcina>();
-                     
-                    drzavaZaPromenu.PodrzaneVakcine.Add(vakcina);
+                Context.Spoj.Add(veza);
                 
                 await Context.SaveChangesAsync();
                 return Ok("Dodata vazeca vakcina");                
@@ -228,48 +230,61 @@ namespace Travel.Controllers
                 TipTesta tip;
                 Vakcina vakcina = null;
                 Test trazeniTest = null;
-                
-                if(tipTesta != null){
 
-                if(starostTesta == null)
-                        return BadRequest("Mora se uneti starost testa");
-
-                tip = odrediTip(tipTesta);
-
-                 trazeniTest = Context.Testovi.Where(p => p.Tip == tip && p.Starost>=starostTesta).FirstOrDefault();
-                if(trazeniTest == null)
-                    return BadRequest("Trazeni test ne postoji u bazi podataka");
-                }
-                if(nazivVakcine != null){
-                    if(doza == null)
-                        return BadRequest("Mora se uneti doza vakcine");
-                    vakcina = Context.Vakcine.Where(p => p.Proizvodjac==nazivVakcine && p.Doza == doza).FirstOrDefault();
-                if(vakcina == null)
-                    return BadRequest("Takva vakcina ne postoji u bazi");
-                }
-                
-                
-                var drzave = Context.Drzave.Where(p => p.PodrzaniPasosi.Contains(trazeniPasos));
-                var drzaveVakcina = drzave;
-                var drzaveTest = drzave;
-                //iz var drzave izdvojiti samo drzave koje sadrze "trazeniTest" ili "vakcina"
-                if(tipTesta != null)
-                    drzaveTest = drzave.Where(p=> p.PodrzaniTestovi.Contains(trazeniTest));
+                //nadji listu drzava koje podrzavaju prosledjeni test
+                //nadji listu drzava koje podrzavaju prosledjenu vakcinu
+                //spoji ih
                 if(nazivVakcine != null)
-                    drzaveVakcina = drzave.Where(p=> p.PodrzaneVakcine.Contains(vakcina));
+                {
+                    vakcina = Context.Vakcine.Where(p=>p.Proizvodjac == nazivVakcine).FirstOrDefault();
+                    if(vakcina == null)
+                        return BadRequest("Prosledjena vakcina ne postoji");
+                }
+                if(tipTesta != null)
+                {
+                    tip = odrediTip(tipTesta); 
+                    trazeniTest = Context.Testovi.Where(p=>p.Tip == tip && p.Starost == starostTesta).FirstOrDefault();
+                    if(trazeniTest == null)
+                        return BadRequest("Trazeni test ne postoji u bazi podataka!");
+
+                }
+
                 
+                var drzave = Context.Drzave.Where(p=> p.PodrzaniPasosi.Contains(trazeniPasos));
+                var drzavaTest = drzave;
+                var drzavaVakcina = drzave;
+
+                if(trazeniTest != null)
+                    drzavaTest = drzave.Where(p=> p.PodrzaniTestovi.Contains(trazeniTest));
                 
-                if(nazivVakcine != null && tipTesta != null)
-                    drzave = drzaveVakcina.Union(drzaveTest);
-                else if(nazivVakcine == null && tipTesta != null)
-                    drzave = drzaveTest;
+                var spojevi = Context.Spoj.Include(p=> p.drzava)
+                                          .Include(p=>p.vakcina);
+               
+                
+                var potrebniSpojevi = spojevi.Where(p=> vakcina==null ||  p.vakcina.ID == vakcina.ID);
+                
+
+                if(vakcina!= null && trazeniTest != null)
+                {
+                    drzave = drzavaTest;
+                    drzavaVakcina = potrebniSpojevi.Select(p=>p.drzava);
+                    drzave = drzave.Union(drzavaVakcina);
+                }
+
+                else if(vakcina == null && trazeniTest != null)
+                    drzave = drzavaTest;
+                
                 else
-                    drzave = drzaveVakcina;
-
-                return Ok(drzave);
-
+                    drzave = potrebniSpojevi.Select(p=>p.drzava);
 
                 
+
+                return Ok(await drzave.Select(p => 
+                    new{
+                        Drzava = p.Naziv,
+                        SVGId = p.SVGId,
+                        ID = p.ID
+                    }).ToListAsync()); 
             }
             catch(Exception e){
                 return BadRequest(e.Message);
@@ -280,17 +295,17 @@ namespace Travel.Controllers
 /////////////PRIVATNE FUNKCIJE
         private bool validanTip(string tip)
         {
-            string[] testovi = {"pcr","PCR","Pcr","antigenski","ANTIGENSKI","Antigenski","antigenski","ANTITELA","antitela","Antitela"};
-            return testovi.Contains(tip);
+            string[] testovi = {"pcr","antigenski","antitela"};
+            return testovi.Contains(tip,StringComparer.InvariantCultureIgnoreCase);
 
         }
         private TipTesta odrediTip(string tipTesta)
         {
             TipTesta tip;
-            if(tipTesta == "PCR" || tipTesta == "pcr" || tipTesta =="Pcr")
+            if(string.Equals(tipTesta,"pcr",StringComparison.InvariantCultureIgnoreCase))
                 tip = TipTesta.PCR;
             
-            else if(tipTesta == "ANTIGENSKI" || tipTesta == "antigenski" || tipTesta == "Antigenski")
+            else if(string.Equals(tipTesta,"antigenski",StringComparison.InvariantCultureIgnoreCase))
                 tip = TipTesta.ANTIGENSKI;
             
             else 

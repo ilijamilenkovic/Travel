@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Models;
 
@@ -26,7 +27,14 @@ namespace Travel.Controllers
         [HttpGet]
         public async Task<ActionResult> PreuzmiTestove()
         {
-            return Ok(Context.Testovi);
+            
+            return Ok(await Context.Testovi.Select(p=>
+            new{
+                Tip = p.Tip,
+                Starost = p.Starost,
+                ID = p.ID
+                
+            }).ToListAsync());
         }
 
         [Route("DodajTestFromBody")]

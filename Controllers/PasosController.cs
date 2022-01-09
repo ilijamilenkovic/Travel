@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Models;
 
@@ -46,7 +47,11 @@ namespace Travel.Controllers
         [HttpGet]
         public async Task<ActionResult> PreuzmiPasose()
         {
-            return Ok(Context.Pasosi);
+            return Ok(await Context.Pasosi.Select(p=>
+            new{
+                Drzavljanstvo = p.Drzavljanstvo,
+                ID = p.ID
+            }).ToListAsync());
         }
     }
 }
