@@ -25,9 +25,13 @@ namespace Travel.Controllers
 
         [Route("Preuzmi")]
         [HttpGet]
-        public ActionResult Preuzmi()
+        public async Task<ActionResult> Preuzmi()
         {
-            return Ok(Context.Drzave);
+            return Ok(await Context.Drzave.Select(p=>
+            new{
+                naziv = p.Naziv,
+                id = p.ID
+            }).ToListAsync());
         }
         
         [Route("Dodaj")]
@@ -101,31 +105,36 @@ namespace Travel.Controllers
         //     }
         // }
 
-        [Route("DodajVazecuVakcinu/{drzava}/{nazivVakcine}/{doza}")]
-        [HttpPut]
-        public async Task<ActionResult> DodajVazecuVakcinu(string drzava,string nazivVakcine, int doza)
+        [Route("DodajVazecuVakcinu/{idDrzave}/{idVakcine}/{doza}")]
+        [HttpPost]
+        public async Task<ActionResult> DodajVazecuVakcinu(int idDrzave,int idVakcine, int doza)
         {
             //provere
-            if(string.IsNullOrWhiteSpace(nazivVakcine) || nazivVakcine.Length > 50)
-                return BadRequest("Nevalidan naziv proizvodjaca vakcine");
-            if(string.IsNullOrWhiteSpace(drzava) || drzava.Length > 40)
-                return BadRequest("Nevalidan naziv drzave");
+            // if(string.IsNullOrWhiteSpace(nazivVakcine) || nazivVakcine.Length > 50)
+            //     return BadRequest("Nevalidan naziv proizvodjaca vakcine");
+            // if(string.IsNullOrWhiteSpace(drzava) || drzava.Length > 40)
+            //     return BadRequest("Nevalidan naziv drzave");
             if(doza< 0)
                 return BadRequest("Nevalidna doza");
 
             try{
-                var drzavaZaPromenu = Context.Drzave.Where(p => p.Naziv == drzava).FirstOrDefault();
+                var drzavaZaPromenu = Context.Drzave.Where(p => p.ID == idDrzave).FirstOrDefault();
                 if(drzavaZaPromenu == null)
                     return BadRequest("Takva drzava ne postoji");
                 
-                var vakcina = Context.Vakcine.Where(p => p.Proizvodjac == nazivVakcine).FirstOrDefault();
+                var vakcina = Context.Vakcine.Where(p => p.ID == idVakcine).FirstOrDefault();
                 if(vakcina == null)
                     return BadRequest("Takva vakcina ne postoji!");
+
+                
                 
                 DrzavaVakcina veza = new DrzavaVakcina();
                 veza.doza = doza;
                 veza.drzava = drzavaZaPromenu;
                 veza.vakcina = vakcina;
+
+                if(Context.Spoj.Any(v=>v.drzava == veza.drzava && v.vakcina == veza.vakcina))
+                    return BadRequest("Vakcina je vec podrzana u toj drzavi!");
 
                 Context.Spoj.Add(veza);
                 
@@ -137,13 +146,79 @@ namespace Travel.Controllers
                 return BadRequest(e.Message);
             }
         }
+        [Route("PreuzmiDozu/{drzavaId}/{vakcinaId}")]
+        [HttpGet]
+        public ActionResult PreuzmiDozu(int drzavaId, int vakcinaId)
+        {
+            //provere
+            try{
+            var spojevi = Context.Spoj.Include(p=> p.drzava)
+                                          .Include(p=>p.vakcina);
+            
+            var potrebanSpoj = spojevi.Where(p=> p.drzava.ID == drzavaId && p.vakcina.ID == vakcinaId).FirstOrDefault();
+
+            if(potrebanSpoj == null)
+            {
+                return BadRequest("Prosledjena drzava ne podrzava prosledjenu vakcinu!");
+            }
+            return Ok(new{
+                doza = potrebanSpoj.doza
+            });
+            }
+            catch(Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+            
+        }
+        [Route("AzurirajDozu/{drzavaId}/{vakcinaId}/{doza}")]
+        [HttpPut]
+        public async Task<ActionResult> AzurirajDozu(int drzavaId, int vakcinaId,int doza){
+            try{
+                var spojevi = Context.Spoj.Include(p=>p.drzava)
+                                          .Include(p=>p.vakcina);
+                var spoj = spojevi.Where(p=> p.drzava.ID == drzavaId && p.vakcina.ID == vakcinaId).FirstOrDefault();
+                if(spoj == null)
+                    return BadRequest("Drzava ne podrzava datu vakcinu");
+                spoj.doza = doza;
+                await Context.SaveChangesAsync();
+                return Ok("Uspesna izmena");
+                
+
+                
+            }
+            catch(Exception e){
+                return BadRequest(e.Message);
+            }
+        }
+
+        [Route("ObrisiVazecuVakcinu/{drzavaId}/{vakcinaId}")]
+        [HttpDelete]
+        public async Task<ActionResult> ObrisiVazecuVakcinu(int drzavaId,int vakcinaId)
+        {
+            //provere
+            try{
+            var spojevi = Context.Spoj.Include(p=> p.drzava)
+                                          .Include(p=>p.vakcina);
+            var spojZaBrisanje = spojevi.Where(p=> p.drzava.ID == drzavaId && p.vakcina.ID == vakcinaId).FirstOrDefault();
+            Context.Spoj.Remove(spojZaBrisanje);
+            await Context.SaveChangesAsync();
+            return Ok("Uspesno obrisana vazeca vakcina!");
+
+            }
+            catch(Exception e){
+                return BadRequest(e.Message);
+            }
+
+                                        
+        }
 
 
 
 
 
         [Route("DodajVazeciTest/{nazivDrzave}/{test}/{starostTesta}")]
-        [HttpPut]
+        [HttpPost]
         public async Task<ActionResult> DodajVazeciTest(string nazivDrzave, string test,int starostTesta)
         {
             //provere
@@ -164,15 +239,24 @@ namespace Travel.Controllers
             TipTesta tipTesta = odrediTip(test);
         
             var noviTest = Context.Testovi.Where(p => p.Tip == tipTesta && p.Starost <= starostTesta).FirstOrDefault();
+
             if(noviTest == null)
                 return BadRequest("Nevalidan test");
 
             if(drzavaZaPromenu.PodrzaniTestovi == null)
                 drzavaZaPromenu.PodrzaniTestovi = new List<Test>();
             
-            drzavaZaPromenu.PodrzaniTestovi.Add(noviTest);
-            await Context.SaveChangesAsync();
-            return Ok("Uspesno dodat vazeci test");
+
+            //proveri da l drzava vec ima taj test
+                        
+            if(!drzavaZaPromenu.PodrzaniTestovi.Contains(noviTest)){
+                drzavaZaPromenu.PodrzaniTestovi.Add(noviTest);
+                await Context.SaveChangesAsync();
+                return Ok("Uspesno dodat vazeci test");
+            }
+            
+            return BadRequest("Takav test vec postoji");
+            
 
             }
             catch(Exception e)
@@ -211,21 +295,21 @@ namespace Travel.Controllers
             }
         }
 
-        [Route("PreuzmiPodrzano/{pasos}")]
+        [Route("PreuzmiPodrzano/{pasosId}")]
         [HttpGet]
-        public async Task<ActionResult> PreuzmiPodrzano(string pasos,[FromQuery]string nazivVakcine,[FromQuery]int? doza,[FromQuery]string tipTesta,[FromQuery]int? starostTesta)
+        public async Task<ActionResult> PreuzmiPodrzano(int pasosId,[FromQuery]int? vakcinaId,[FromQuery]int? doza,[FromQuery]string tipTesta,[FromQuery]int? starostTesta)
         {
             //provere
-            if(string.IsNullOrWhiteSpace(pasos) || pasos.Length > 50)
-                return BadRequest("Nevalidan pasos");
+            // if(string.IsNullOrWhiteSpace(pasos) || pasos.Length > 50)
+            //     return BadRequest("Nevalidan pasos");
          
             try{
                 //pasos je obavezan da se unese
-                var trazeniPasos = Context.Pasosi.Where(p=> p.Drzavljanstvo == pasos).FirstOrDefault();
+                var trazeniPasos = Context.Pasosi.Where(p=> p.ID == pasosId).FirstOrDefault();
                 if(trazeniPasos == null)
                     return BadRequest("Uneti pasos ne postoji u bazi podataka");
                 
-                if(nazivVakcine== null && tipTesta == null)
+                if(vakcinaId == null && tipTesta == null)
                     return BadRequest("Svaki unos mora da sadrzi ili vakcinu ili tip testa ili oba.");
                 TipTesta tip;
                 Vakcina vakcina = null;
@@ -234,9 +318,9 @@ namespace Travel.Controllers
                 //nadji listu drzava koje podrzavaju prosledjeni test
                 //nadji listu drzava koje podrzavaju prosledjenu vakcinu
                 //spoji ih
-                if(nazivVakcine != null)
+                if(vakcinaId != null)
                 {
-                    vakcina = Context.Vakcine.Where(p=>p.Proizvodjac == nazivVakcine).FirstOrDefault();
+                    vakcina = Context.Vakcine.Where(p=>p.ID == vakcinaId).FirstOrDefault();
                     if(vakcina == null)
                         return BadRequest("Prosledjena vakcina ne postoji");
                 }
@@ -290,6 +374,8 @@ namespace Travel.Controllers
                 return BadRequest(e.Message);
             }
         }
+
+
 
 
 /////////////PRIVATNE FUNKCIJE

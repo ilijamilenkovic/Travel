@@ -1,0 +1,98 @@
+.glavniKontejner{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    transform: scale(1);
+    
+    
+}
+@media all and (min-width: 1339px){
+.mapaK{
+    
+    display:inline-block;
+    transform:scale(1.5);
+    position:absolute;
+    right:0px;
+    top:0px;
+    transform-origin:top right;
+}
+.svgObj{
+    max-width: 100%;
+}
+.dozvoljeneDrzave{
+    fill: #4cfb00;
+}
+
+.zaZamenuKont{
+    display: flex;
+    flex-direction: row;
+    
+    padding: 2%;
+    
+}
+.formaPostDelete{
+    border: 1px solid #C0C0C0;
+    padding: 3%;
+    margin-top: 3%;
+}
+.zaZamenuKontVakcina,.zaZamenuKontTest{
+    padding: 2%;
+}
+.zaZamenuKontVakcina{
+    border-right: 1px solid #C0C0C0;
+}
+
+.dugmadRed{
+    display: flex;
+    justify-content: space-between;
+    padding: 1%;
+}
+}
+
+
+
+
+
+@media all and (max-width: 1338px){
+    .glavniKontejner{
+    
+        display: flex;
+        flex-direction: column;
+    }
+    .forma{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+    .formaPrikazi{
+        border: 1px solid black;
+        padding: 3%;
+    }
+    .zaZamenuKont{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    .formaPostDelete{
+        border: 1px solid black;
+        padding: 3%;
+    }
+    .mapaK{
+        display: flex;
+        justify-content: center;
+        margin: 3%;
+    }
+
+}
+@media all and (max-width: 620px){
+    .glavniKontejner{
+    
+        display: flex;
+        flex-direction: column;
+    }
+    .forma{
+        display: flex;
+        flex-direction: column;
+        
+    }
+}

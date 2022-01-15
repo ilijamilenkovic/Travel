@@ -43,7 +43,7 @@ namespace Travel.Controllers
             }
         }
 
-        [Route("Preuzmi pasose")]
+        [Route("PreuzmiPasose")]
         [HttpGet]
         public async Task<ActionResult> PreuzmiPasose()
         {
