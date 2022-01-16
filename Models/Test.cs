@@ -1,6 +1,7 @@
 
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Models
 {
@@ -20,6 +21,7 @@ namespace Models
 
         public int Starost{get;set;} //starost testa izrazena u satima
         
+        [JsonIgnore]
         public List<Drzava> PodrzaneDrzave{get;set;}//za koje drzave vazi
     }
 }

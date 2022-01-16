@@ -440,8 +440,13 @@ export class Travel {
                             
                             
                             drzave.getElementById(d.svgId).style.fill = "#4cfb00";
+                            if(d.svgId == "rs-8")
+                                drzave.getElementById("xk-6").style.fill = "#4cfb00";
                             
-                            //var dozvoljena = drzave.getElementById(d.svgId).className ="dozvoljeneDrzave";
+                            
+                            // var dozvoljena = drzave.getElementById(d.svgId);
+                            // dozvoljena.className = "dozvoljeneDrzave";
+
                             //Uncaught (in promise) TypeError: setting getter-only property "className"
                             
                             
@@ -572,10 +577,77 @@ export class Travel {
         opcije = this.container.querySelector(".starostiKontUpdate");
         let starost = opcije.querySelector("input:checked");
 
-        console.log(starost.value);
+        //console.log(starost.value);
+
+        if(akcija == "dodaj" && drzava.value != "none" && test.value!="none"&&starost!=null)
+            this.dodajTest(drzava.value,test.value,starost.value);
+
+        if(akcija == "obrisi" && drzava.value != "none" && test.value!="none")
+            this.obrisiTest(drzava.value,test.value);
+
+        if(akcija == "vratiStarost" && drzava.value != "none" && test.value!="none")
+            this.vratiPodrzanuStarost(drzava.value, test.value);
+
+        if(akcija == "azurirajStarost" && drzava.value != "none" && test.value!="none"&&starost!=null)
+            this.azurirajPodrzanuStarost(drzava.value,test.value,starost.value);
 
 
 
+    }
+    dodajTest(idDrzave,test,starost){
+        fetch("https://localhost:5001/Drzava/DodajVazeciTest/" + idDrzave +"/"+test+"/"+starost,
+        {
+            method:"POST"
+        }).then(s=>{
+            if(s.ok)
+                alert("Uspesno!");
+            else
+                alert("Neuspesno!");
+        })
+    }
+
+    obrisiTest(idDrzave,test){
+        fetch("https://localhost:5001/Drzava/IzbrisiVazeciTest/"+idDrzave+"/"+test,
+        {
+            method:"DELETE"
+        }).then(s=>{
+            if(s.ok)
+                alert("Uspesno!");
+            else
+                alert("Neuspesno!");
+        })
+
+    }
+    vratiPodrzanuStarost(idDrzave,test){
+        fetch("https://localhost:5001/Drzava/PreuzmiPodrzanuStarost/"+idDrzave+"/"+test,
+        {
+            method: "GET"
+        }).then(s=>{
+            if(s.ok){
+                s.json().then(data=>{
+                let opcije = this.container.querySelector(".starostiKontUpdate");
+                let starost = opcije.querySelectorAll("input");
+                if(starost[0].value == data.starost)
+                    starost[0].checked = true;
+                else if(starost[1].value == data.starost)
+                    starost[1].checked = true;
+                })
+             
+        }
+        else
+                alert("Drzava ne podrzava dati test");
+            })
+    }
+    azurirajPodrzanuStarost(idDrzave,test,starost){
+        fetch("https://localhost:5001/Drzava/AzurirajVazecuStarost/" + idDrzave +"/"+test+"/"+starost,
+        {
+            method:"PUT"
+        }).then(s=>{
+            if(s.ok)
+                alert("Uspesna izmena!");
+            else
+                alert("Neuspesna izmena!");
+        })
     }
     
 }
